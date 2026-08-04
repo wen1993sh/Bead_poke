@@ -99,6 +99,12 @@ function formatStatus(status) {
   return "status-error";
 }
 
+function formatStatusLabel(status) {
+  if (status === "ok") return "已通过";
+  if (status === "review") return "待校正";
+  return "异常";
+}
+
 function renderCards() {
   const filtered = state.items.filter((item) => {
     const needle = state.query.trim().toLowerCase();
@@ -112,19 +118,41 @@ function renderCards() {
   }
   cardsEl.innerHTML = filtered.map((item) => `
     <label class="card">
-      <div class="thumb">
-        ${item.image ? `<img src="${item.image}" alt="${item.name || item.id}" />` : `<span class="placeholder">暂无缩略图</span>`}
+      <div class="card-media">
+        <div class="thumb">
+          ${item.image ? `<img src="${item.image}" alt="${item.name || item.id}" />` : `<span class="placeholder">暂无缩略图</span>`}
+        </div>
+        <div class="card-flag ${formatStatus(item.status)}">${formatStatusLabel(item.status)}</div>
       </div>
-      <header>
-        <strong>${item.id}</strong>
-        <input type="checkbox" ${state.selected.has(item.id) ? "checked" : ""} data-id="${item.id}" />
-      </header>
-      <div>${item.name || "未命名"}</div>
-      <div class="badge">模板：${item.template || "unknown"}</div>
-      <div class="badge ${formatStatus(item.status)}">状态：${item.status || "error"}</div>
-      <div class="badge">总豆数：${item.total ?? 0}</div>
-      <div class="badge">置信度：${Number(item.confidence ?? 0).toFixed(2)}</div>
-      <div class="badge">色号：${(item.beads || []).length}</div>
+      <div class="card-head">
+        <div>
+          <p class="card-id">#${item.id}</p>
+          <h3>${item.name || "未命名"}</h3>
+        </div>
+        <input type="checkbox" ${state.selected.has(item.id) ? "checked" : ""} data-id="${item.id}" aria-label="选择 ${item.name || item.id}" />
+      </div>
+      <div class="meta-grid">
+        <div>
+          <span>模板</span>
+          <strong>${item.template || "unknown"}</strong>
+        </div>
+        <div>
+          <span>总豆数</span>
+          <strong>${item.total ?? 0}</strong>
+        </div>
+        <div>
+          <span>置信度</span>
+          <strong>${Number(item.confidence ?? 0).toFixed(2)}</strong>
+        </div>
+        <div>
+          <span>色号数</span>
+          <strong>${(item.beads || []).length}</strong>
+        </div>
+      </div>
+      <div class="chip-row">
+        <span class="chip">${item.status || "error"}</span>
+        <span class="chip chip-muted">${item.image ? "有缩略图" : "无缩略图"}</span>
+      </div>
     </label>
   `).join("");
 
@@ -155,6 +183,8 @@ function aggregateSelection() {
 function renderSummary() {
   const { selectedItems, counts } = aggregateSelection();
   const rows = [...counts.entries()].sort(([a], [b]) => a.localeCompare(b));
+  const selectedTotal = selectedItems.reduce((sum, item) => sum + Number(item.total || 0), 0);
+  const beadTotal = rows.reduce((sum, [, count]) => sum + Number(count || 0), 0);
 
   if (selectionCountEl) {
     selectionCountEl.textContent = String(selectedItems.length);
@@ -162,6 +192,8 @@ function renderSummary() {
 
   summaryEl.innerHTML = [
     `<div class="summary-row"><span>已选条目</span><strong>${selectedItems.length}</strong></div>`,
+    `<div class="summary-row"><span>条目总豆数</span><strong>${selectedTotal}</strong></div>`,
+    `<div class="summary-row"><span>汇总总豆数</span><strong>${beadTotal}</strong></div>`,
     `<div class="summary-row"><span>当前模式</span><strong>${usingDemoData ? "示例数据" : "真实数据"}</strong></div>`,
     ...rows.map(([code, count]) => `<div class="summary-row"><span>${code}</span><strong>${count}</strong></div>`),
   ].join("");

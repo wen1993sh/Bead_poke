@@ -109,7 +109,7 @@ input[type="search"], textarea {
 
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 14px;
 }
 
@@ -119,23 +119,28 @@ input[type="search"], textarea {
   padding: 14px;
   background: white;
   box-shadow: 0 6px 24px rgba(15, 23, 42, 0.04);
+  display: grid;
+  gap: 12px;
 }
 
-.card header {
+.card-media {
+  position: relative;
+}
+
+.card-head {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  align-items: start;
 }
 
 .thumb {
   width: 100%;
-  aspect-ratio: 4 / 3;
-  border-radius: 14px;
+  aspect-ratio: 16 / 10;
+  border-radius: 16px;
   background: linear-gradient(135deg, #e8edf3 0%, #dfe7ef 100%);
   border: 1px solid var(--border);
   overflow: hidden;
-  margin-bottom: 12px;
   display: grid;
   place-items: center;
 }
@@ -145,6 +150,78 @@ input[type="search"], textarea {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.card-flag {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.card-id {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: .12em;
+}
+
+.card h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.meta-grid div {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+
+.meta-grid span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.meta-grid strong {
+  font-size: 15px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: #e9eef4;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chip-muted {
+  background: #f3f5f8;
+  color: var(--muted);
 }
 
 .badge {
@@ -180,6 +257,11 @@ input[type="search"], textarea {
   gap: 10px;
   border-bottom: 1px dashed var(--border);
   padding-bottom: 8px;
+  font-size: 14px;
+}
+
+.summary-row strong {
+  font-variant-numeric: tabular-nums;
 }
 
 textarea {
