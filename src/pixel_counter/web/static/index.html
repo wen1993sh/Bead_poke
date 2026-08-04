@@ -11,13 +11,28 @@
     <div>
       <p class="eyebrow">Pixel bead counter</p>
       <h1>拼豆图鉴汇总器</h1>
-      <p class="subtle">读取 output/index.json，勾选宝可梦后汇总色号数量。</p>
+      <p class="subtle">从图片解析 JSON，再勾选条目汇总色号数量。</p>
     </div>
     <div class="actions">
       <button id="refresh">重新生成索引</button>
       <button id="copy">复制汇总</button>
     </div>
   </header>
+
+  <section class="status-strip panel">
+    <div>
+      <p class="status-label">当前数据源</p>
+      <strong id="sourceMode">示例数据</strong>
+    </div>
+    <div>
+      <p class="status-label">当前选择</p>
+      <strong id="selectionCount">0</strong>
+    </div>
+    <div>
+      <p class="status-label">说明</p>
+      <strong>页面支持缩略图、筛选和汇总</strong>
+    </div>
+  </section>
 
   <main class="layout">
     <section class="panel">
@@ -35,6 +50,6 @@
     </aside>
   </main>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=20260804"></script>
 </body>
 </html>

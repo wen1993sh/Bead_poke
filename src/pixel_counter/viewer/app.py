@@ -13,7 +13,10 @@ from pixel_counter.parser.pipeline import build_catalog, load_index
 def build_app() -> FastAPI:
     app = FastAPI(title="Pixel Bead Counter")
     static_dir = Path(__file__).resolve().parent.parent / "web" / "static"
+    image_dir = Path(__file__).resolve().parents[3] / "image"
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
+    if image_dir.exists():
+        app.mount("/images", StaticFiles(directory=image_dir), name="images")
 
     @app.get("/")
     def home() -> FileResponse:

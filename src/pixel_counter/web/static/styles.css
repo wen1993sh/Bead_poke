@@ -1,20 +1,21 @@
 :root {
   color-scheme: light;
-  --bg: #f5f3ee;
-  --panel: #fffdfa;
-  --ink: #1f2328;
+  --bg: #f4f6f8;
+  --panel: #ffffff;
+  --ink: #1f2937;
   --muted: #6b7280;
-  --accent: #2d6cdf;
-  --border: #d7d3ca;
+  --accent: #4b5563;
+  --border: #d9e0e7;
+  --surface: #eef2f7;
 }
 
 * { box-sizing: border-box; }
 
 body {
   margin: 0;
-  background: linear-gradient(180deg, #f8f5ef 0%, #ebe7dd 100%);
+  background: linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
   color: var(--ink);
-  font: 16px/1.5 "Segoe UI", system-ui, sans-serif;
+  font: 16px/1.5 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
 }
 
 .hero,
@@ -42,6 +43,28 @@ body {
 h1, h2, p { margin: 0; }
 
 .subtle { color: var(--muted); margin-top: 6px; }
+
+.status-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.status-strip > div {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+}
+
+.status-label {
+  margin: 0 0 6px;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 
 .actions { display: flex; gap: 10px; }
 
@@ -95,6 +118,7 @@ input[type="search"], textarea {
   border-radius: 16px;
   padding: 14px;
   background: white;
+  box-shadow: 0 6px 24px rgba(15, 23, 42, 0.04);
 }
 
 .card header {
@@ -102,6 +126,25 @@ input[type="search"], textarea {
   justify-content: space-between;
   gap: 8px;
   margin-bottom: 10px;
+}
+
+.thumb {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #e8edf3 0%, #dfe7ef 100%);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  margin-bottom: 12px;
+  display: grid;
+  place-items: center;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .badge {
@@ -116,6 +159,12 @@ input[type="search"], textarea {
 .status-ok { color: #0f8a5f; }
 .status-review { color: #aa6500; }
 .status-error { color: #ba1b1b; }
+
+.placeholder {
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: .03em;
+}
 
 .summary {
   display: grid;
@@ -141,4 +190,5 @@ textarea {
 @media (max-width: 980px) {
   .layout { grid-template-columns: 1fr; }
   .hero { align-items: start; flex-direction: column; }
+  .status-strip { grid-template-columns: 1fr; }
 }
