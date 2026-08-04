@@ -1,0 +1,27 @@
+{
+  "presets": [
+    {
+      "id": "sample-0001",
+      "rows": 19,
+      "cols": 20,
+      "image_size": [1264, 1504],
+      "title_band": [0.0, 0.0, 1.0, 0.09],
+      "axis_top_band": [0.0, 0.09, 1.0, 0.14],
+      "grid_band": [0.03, 0.14, 0.97, 0.86],
+      "summary_band": [0.0, 0.86, 1.0, 1.0],
+      "notes": "Matches 0001.jpg in the sample folder."
+    },
+    {
+      "id": "sample-0009",
+      "rows": 24,
+      "cols": 25,
+      "image_size": [1264, 1458],
+      "title_band": [0.0, 0.0, 1.0, 0.09],
+      "axis_top_band": [0.0, 0.09, 1.0, 0.14],
+      "grid_band": [0.03, 0.14, 0.97, 0.86],
+      "summary_band": [0.0, 0.86, 1.0, 1.0],
+      "notes": "Matches 0009.jpg in the sample folder."
+    }
+  ]
+}
+

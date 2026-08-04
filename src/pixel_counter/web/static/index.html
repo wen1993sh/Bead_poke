@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>拼豆图鉴汇总器</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <header class="hero">
+    <div>
+      <p class="eyebrow">Pixel bead counter</p>
+      <h1>拼豆图鉴汇总器</h1>
+      <p class="subtle">读取 output/index.json，勾选宝可梦后汇总色号数量。</p>
+    </div>
+    <div class="actions">
+      <button id="refresh">重新生成索引</button>
+      <button id="copy">复制汇总</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="toolbar">
+        <input id="search" type="search" placeholder="搜索编号、名称、模板" />
+        <span id="count"></span>
+      </div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <aside class="panel summary">
+      <h2>汇总</h2>
+      <div id="summary"></div>
+      <textarea id="summaryText" readonly></textarea>
+    </aside>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
