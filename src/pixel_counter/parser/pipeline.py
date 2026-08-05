@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections import Counter
 from pathlib import Path
 import json
+from urllib.parse import quote
 
 from PIL import Image
 
@@ -46,19 +47,19 @@ def parse_image(image_path: Path, presets: list[TemplatePreset] | None = None) -
     axis_top_crop = _center_crop_for_box(image_path, layout.axis_top_box)
 
     try:
-        grid_lines = recognize_lines(grid_crop)
+        grid_lines = recognize_lines(grid_crop, preprocess="full")
     except Exception as exc:
         warnings.append(f"grid-ocr-failed: {exc}")
         grid_lines = []
 
     try:
-        summary_lines = recognize_lines(summary_crop)
+        summary_lines = recognize_lines(summary_crop, preprocess="none")
     except Exception as exc:
         warnings.append(f"summary-ocr-failed: {exc}")
         summary_lines = []
 
     try:
-        axis_lines = recognize_lines(axis_top_crop)
+        axis_lines = recognize_lines(axis_top_crop, preprocess="full")
     except Exception as exc:
         warnings.append(f"axis-ocr-failed: {exc}")
         axis_lines = []
@@ -75,7 +76,19 @@ def parse_image(image_path: Path, presets: list[TemplatePreset] | None = None) -
 
     merged_beads = merge_beads(BeadCount(code=code, count=count) for code, count in grid_counts.items())
     total = total_beads(merged_beads)
-    confidence = 0.98 if status == "ok" else 0.5 if status == "review" else 0.0
+
+    # Confidence: based on code-set overlap between grid and summary
+    if not grid_counts:
+        confidence = 0.0
+    elif not summary_counts:
+        confidence = 0.60
+    else:
+        overlap = set(summary_counts) & set(grid_counts)
+        all_summary = set(summary_counts)
+        if all_summary:
+            confidence = 0.70 + 0.25 * (len(overlap) / len(all_summary))
+        else:
+            confidence = 0.60
 
     return ParseResult(
         id=image_path.stem,
@@ -116,7 +129,7 @@ def build_catalog(image_dir: Path, output_dir: Path | None = None) -> dict:
             {
                 "id": result.id,
                 "name": result.name,
-                "image": result.image,
+                "image": f"/images/{quote(image_path.name)}",
                 "template": result.template,
                 "grid_rows": result.grid_rows,
                 "grid_cols": result.grid_cols,
@@ -124,6 +137,7 @@ def build_catalog(image_dir: Path, output_dir: Path | None = None) -> dict:
                 "status": result.status,
                 "confidence": result.confidence,
                 "warnings": result.warnings,
+                "beads": [{"code": b.code, "count": b.count} for b in result.beads],
             }
         )
 

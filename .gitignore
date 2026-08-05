@@ -6,3 +6,4 @@ output/reviews/
 .mypy_cache/
 .pytest_cache/
 .vscode/
+*.egg-info/

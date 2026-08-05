@@ -1,25 +1,15 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 
 SUPPORTED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 
-def natural_key(path: Path) -> list[object]:
-    key: list[object] = []
-    current = ""
-    for char in path.stem:
-        if char.isdigit():
-            current += char
-            continue
-        if current:
-            key.append(int(current))
-            current = ""
-        key.append(char.lower())
-    if current:
-        key.append(int(current))
-    return key
+def natural_key(path: Path) -> tuple:
+    parts = re.split(r"(\d+)", path.stem.lower())
+    return tuple(int(p) if p.isdigit() else p for p in parts)
 
 
 def scan_image_files(image_dir: Path) -> list[Path]:
