@@ -2,6 +2,9 @@ const state = {
   items: [],
   selected: new Set(),
   query: "",
+  reviewOnly: false,
+  colorLibrary: { codes: {}, palette: [], source: "" },
+  detailItem: null,
 };
 
 const cardsEl = document.querySelector("#cards");
@@ -11,6 +14,28 @@ const countEl = document.querySelector("#count");
 const searchEl = document.querySelector("#search");
 const sourceModeEl = document.querySelector("#sourceMode");
 const selectionCountEl = document.querySelector("#selectionCount");
+const selectAllEl = document.querySelector("#selectAll");
+const clearAllEl = document.querySelector("#clearAll");
+const toggleReviewOnlyEl = document.querySelector("#toggleReviewOnly");
+const colorLibraryEl = document.querySelector("#colorLibrary");
+const rebuildColorLibraryEl = document.querySelector("#rebuildColorLibrary");
+
+const detailModalEl = document.querySelector("#detailModal");
+const detailImageWrapEl = document.querySelector("#detailImageWrap");
+const detailImageEl = document.querySelector("#detailImage");
+const detailImageCaptionEl = document.querySelector("#detailImageCaption");
+const detailTitleEl = document.querySelector("#detailTitle");
+const detailMetaEl = document.querySelector("#detailMeta");
+const detailStatusEl = document.querySelector("#detailStatus");
+const detailReviewerEl = document.querySelector("#detailReviewer");
+const detailBeadsEl = document.querySelector("#detailBeads");
+const closeDetailModalEl = document.querySelector("#closeDetailModal");
+const addBeadRowEl = document.querySelector("#addBeadRow");
+const normalizeCodesEl = document.querySelector("#normalizeCodes");
+const codeQualityHintEl = document.querySelector("#codeQualityHint");
+const saveReviewEl = document.querySelector("#saveReview");
+
+const VALID_CODE_PATTERN = /^[A-Z]\d{1,2}$/;
 
 const DEMO_ITEMS = [
   {
@@ -79,6 +104,42 @@ const DEMO_ITEMS = [
 
 let usingDemoData = true;
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function fallbackColorFromCode(code) {
+  let hash = 0;
+  const text = String(code || "");
+  for (let i = 0; i < text.length; i += 1) {
+    hash = ((hash << 5) - hash + text.charCodeAt(i)) | 0;
+  }
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue} 45% 58%)`;
+}
+
+function colorForCode(code) {
+  const normalized = String(code || "").trim().toUpperCase();
+  return state.colorLibrary.codes?.[normalized] || fallbackColorFromCode(normalized);
+}
+
+async function fetchColorLibrary() {
+  try {
+    const response = await fetch(`/api/color-library?t=${Date.now()}`);
+    if (!response.ok) {
+      throw new Error(`color-library-http-${response.status}`);
+    }
+    state.colorLibrary = await response.json();
+  } catch (error) {
+    state.colorLibrary = { codes: {}, palette: [], source: "fallback" };
+  }
+}
+
 async function fetchIndex() {
   try {
     const response = await fetch(`/api/index?t=${Date.now()}`);
@@ -90,6 +151,7 @@ async function fetchIndex() {
     usingDemoData = true;
   }
   state.selected = new Set(state.items.map((item) => item.id));
+  await fetchColorLibrary();
   render();
 }
 
@@ -105,19 +167,29 @@ function formatStatusLabel(status) {
   return "异常";
 }
 
-function renderCards() {
-  const filtered = state.items.filter((item) => {
+function getFilteredItems() {
+  return state.items.filter((item) => {
     const needle = state.query.trim().toLowerCase();
-    if (!needle) return true;
-    return [item.id, item.name, item.template].some((value) => String(value).toLowerCase().includes(needle));
+    const matchedByText = !needle
+      || [item.id, item.name, item.template].some((value) => String(value).toLowerCase().includes(needle));
+    const matchedByStatus = !state.reviewOnly || item.status === "review" || item.status === "error";
+    return matchedByText && matchedByStatus;
   });
+}
+
+function renderCards() {
+  const filtered = getFilteredItems();
 
   countEl.textContent = `${filtered.length} / ${state.items.length}`;
   if (sourceModeEl) {
     sourceModeEl.textContent = usingDemoData ? "示例数据" : "真实数据";
   }
+  if (toggleReviewOnlyEl) {
+    toggleReviewOnlyEl.textContent = state.reviewOnly ? "显示全部" : "仅看待校验";
+  }
+
   cardsEl.innerHTML = filtered.map((item) => `
-    <label class="card">
+    <article class="card">
       <div class="card-media">
         <div class="thumb">
           ${item.image ? `<img src="${item.image}" alt="${item.name || item.id}" />` : `<span class="placeholder">暂无缩略图</span>`}
@@ -129,7 +201,10 @@ function renderCards() {
           <p class="card-id">#${item.id}</p>
           <h3>${item.name || "未命名"}</h3>
         </div>
-        <input type="checkbox" ${state.selected.has(item.id) ? "checked" : ""} data-id="${item.id}" aria-label="选择 ${item.name || item.id}" />
+        <div class="card-head-actions">
+          <input type="checkbox" ${state.selected.has(item.id) ? "checked" : ""} data-id="${item.id}" aria-label="选择 ${item.name || item.id}" />
+          <button class="tool-btn detail-btn" data-detail-id="${item.id}">详情</button>
+        </div>
       </div>
       <div class="meta-grid">
         <div>
@@ -153,7 +228,7 @@ function renderCards() {
         <span class="chip">${item.status || "error"}</span>
         <span class="chip chip-muted">${item.image ? "有缩略图" : "无缩略图"}</span>
       </div>
-    </label>
+    </article>
   `).join("");
 
   cardsEl.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
@@ -165,6 +240,14 @@ function renderCards() {
         state.selected.delete(id);
       }
       renderSummary();
+    });
+  });
+
+  cardsEl.querySelectorAll(".detail-btn").forEach((button) => {
+    button.addEventListener("click", async (event) => {
+      const itemId = event.currentTarget.dataset.detailId;
+      if (!itemId) return;
+      await openDetailModal(itemId);
     });
   });
 }
@@ -201,6 +284,224 @@ function renderSummary() {
   summaryTextEl.value = rows.length
     ? rows.map(([code, count]) => `${code}\t${count}`).join("\n")
     : "未选择任何条目";
+
+  renderColorLibrary(rows.map(([code]) => code));
+}
+
+function renderColorLibrary(priorityCodes = []) {
+  const allCodes = new Set(priorityCodes);
+  state.items.forEach((item) => {
+    (item.beads || []).forEach((bead) => {
+      if (bead.code) allCodes.add(String(bead.code).toUpperCase());
+    });
+  });
+
+  const codes = [...allCodes].sort((a, b) => a.localeCompare(b));
+  colorLibraryEl.innerHTML = codes.map((code) => {
+    const colorHex = colorForCode(code);
+    return `
+      <label class="color-item">
+        <span class="swatch" style="background:${colorHex}"></span>
+        <span class="color-code">${escapeHtml(code)}</span>
+        <input type="color" value="${normalizeColorHex(colorHex)}" data-color-code="${escapeHtml(code)}" />
+      </label>
+    `;
+  }).join("");
+
+  colorLibraryEl.querySelectorAll("input[type='color']").forEach((input) => {
+    input.addEventListener("change", async (event) => {
+      const code = event.target.dataset.colorCode;
+      if (!code) return;
+      const value = event.target.value;
+      state.colorLibrary.codes = state.colorLibrary.codes || {};
+      state.colorLibrary.codes[code] = value;
+      await fetch("/api/color-library/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codes: { [code]: value } }),
+      });
+      render();
+    });
+  });
+}
+
+function normalizeColorHex(value) {
+  const text = String(value || "").trim();
+  const match = /^#([0-9a-fA-F]{6})$/.exec(text);
+  if (match) return `#${match[1].toLowerCase()}`;
+  return "#9aa5b1";
+}
+
+function normalizeCode(rawCode) {
+  const compact = String(rawCode || "").toUpperCase().replaceAll(" ", "");
+  if (!compact) return "";
+  const matched = /^([A-Z])([A-Z0-9]{1,3})$/.exec(compact);
+  if (!matched) return compact;
+
+  const suffixMap = {
+    O: "0",
+    D: "0",
+    Q: "0",
+    I: "1",
+    L: "1",
+    Z: "2",
+    S: "5",
+  };
+  const normalizedSuffix = [...matched[2]]
+    .map((char) => (/\d/.test(char) ? char : (suffixMap[char] || char)))
+    .join("");
+  return `${matched[1]}${normalizedSuffix}`;
+}
+
+function isValidCode(code) {
+  return VALID_CODE_PATTERN.test(String(code || "").toUpperCase());
+}
+
+function buildBeadRow(code = "", count = 0) {
+  const normalizedCode = normalizeCode(code);
+  const invalidClass = normalizedCode && !isValidCode(normalizedCode) ? "code-invalid" : "";
+  return `
+    <tr class="${invalidClass}">
+      <td><input class="bead-code" type="text" value="${escapeHtml(normalizedCode)}" placeholder="B3" /></td>
+      <td><input class="bead-count" type="number" min="0" value="${Number(count || 0)}" /></td>
+      <td><span class="swatch small" style="background:${colorForCode(normalizedCode)}"></span></td>
+      <td><button class="tool-btn row-remove">删除</button></td>
+    </tr>
+  `;
+}
+
+function refreshDetailCodeValidation() {
+  const rows = [...detailBeadsEl.querySelectorAll("tr")];
+  let invalidCount = 0;
+  rows.forEach((row) => {
+    const codeInput = row.querySelector(".bead-code");
+    const code = normalizeCode(codeInput?.value || "");
+    const valid = !code || isValidCode(code);
+    row.classList.toggle("code-invalid", !valid);
+    if (!valid) invalidCount += 1;
+  });
+
+  if (codeQualityHintEl) {
+    if (invalidCount > 0) {
+      codeQualityHintEl.textContent = `发现 ${invalidCount} 个疑似异常色号，请检查后再保存。`;
+      codeQualityHintEl.classList.add("warning");
+    } else {
+      codeQualityHintEl.textContent = "色号格式：字母 + 1-2 位数字（如 B3、H7、F19）";
+      codeQualityHintEl.classList.remove("warning");
+    }
+  }
+}
+
+function wireDetailRowEvents() {
+  detailBeadsEl.querySelectorAll(".row-remove").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.currentTarget.closest("tr")?.remove();
+      refreshDetailCodeValidation();
+    });
+  });
+
+  detailBeadsEl.querySelectorAll(".bead-code").forEach((input) => {
+    input.addEventListener("input", (event) => {
+      const row = event.target.closest("tr");
+      if (!row) return;
+      const swatch = row.querySelector(".swatch");
+      if (!swatch) return;
+      swatch.style.background = colorForCode(normalizeCode(event.target.value));
+      refreshDetailCodeValidation();
+    });
+
+    input.addEventListener("blur", (event) => {
+      event.target.value = normalizeCode(event.target.value);
+      refreshDetailCodeValidation();
+    });
+  });
+}
+
+function closeDetailModal() {
+  detailModalEl.classList.add("hidden");
+  detailModalEl.setAttribute("aria-hidden", "true");
+  state.detailItem = null;
+}
+
+async function openDetailModal(itemId) {
+  const response = await fetch(`/api/items/${encodeURIComponent(itemId)}?t=${Date.now()}`);
+  if (!response.ok) return;
+  const item = await response.json();
+  state.detailItem = item;
+
+  detailTitleEl.textContent = `${item.id} ${item.name || ""}`.trim();
+
+  if (item.image) {
+    detailImageEl.src = item.image;
+    detailImageEl.alt = item.name || item.id || "条目大图";
+    detailImageCaptionEl.textContent = `原图：${item.name || item.id}`;
+    detailImageWrapEl.classList.remove("hidden");
+    detailImageWrapEl.setAttribute("aria-hidden", "false");
+  } else {
+    detailImageEl.removeAttribute("src");
+    detailImageCaptionEl.textContent = "";
+    detailImageWrapEl.classList.add("hidden");
+    detailImageWrapEl.setAttribute("aria-hidden", "true");
+  }
+
+  detailStatusEl.value = item.status || "review";
+  detailReviewerEl.value = "web";
+  detailMetaEl.innerHTML = `
+    <div><span>模板</span><strong>${escapeHtml(item.template || "unknown")}</strong></div>
+    <div><span>总豆数</span><strong>${Number(item.total || 0)}</strong></div>
+    <div><span>置信度</span><strong>${Number(item.confidence || 0).toFixed(2)}</strong></div>
+    <div><span>状态</span><strong>${escapeHtml(item.status || "error")}</strong></div>
+  `;
+
+  detailBeadsEl.innerHTML = (item.beads || []).map((bead) => buildBeadRow(bead.code, bead.count)).join("") || buildBeadRow();
+  wireDetailRowEvents();
+  refreshDetailCodeValidation();
+
+  detailModalEl.classList.remove("hidden");
+  detailModalEl.setAttribute("aria-hidden", "false");
+}
+
+function collectDetailBeads() {
+  const rows = [...detailBeadsEl.querySelectorAll("tr")];
+  return rows.map((row) => {
+    const code = normalizeCode(row.querySelector(".bead-code")?.value || "");
+    const count = Number(row.querySelector(".bead-count")?.value || 0);
+    return { code, count };
+  }).filter((item) => item.code && isValidCode(item.code) && Number.isFinite(item.count) && item.count >= 0);
+}
+
+function getInvalidDetailCodes() {
+  const rows = [...detailBeadsEl.querySelectorAll("tr")];
+  const invalidCodes = rows.map((row) => normalizeCode(row.querySelector(".bead-code")?.value || ""))
+    .filter((code) => code && !isValidCode(code));
+  return [...new Set(invalidCodes)];
+}
+
+async function saveDetailReview() {
+  if (!state.detailItem) return;
+  const invalidCodes = getInvalidDetailCodes();
+  if (invalidCodes.length) {
+    alert(`有疑似异常色号：${invalidCodes.join(", ")}。请先修正后再保存。`);
+    return;
+  }
+
+  const beads = collectDetailBeads();
+  const payload = {
+    beads,
+    reviewer: detailReviewerEl.value?.trim() || "web",
+    status: detailStatusEl.value || "ok",
+  };
+
+  const response = await fetch(`/api/items/${encodeURIComponent(state.detailItem.id)}/review`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) return;
+
+  closeDetailModal();
+  await fetchIndex();
 }
 
 function render() {
@@ -215,6 +516,52 @@ document.querySelector("#refresh").addEventListener("click", async () => {
 
 document.querySelector("#copy").addEventListener("click", async () => {
   await navigator.clipboard.writeText(summaryTextEl.value);
+});
+
+toggleReviewOnlyEl.addEventListener("click", () => {
+  state.reviewOnly = !state.reviewOnly;
+  renderCards();
+  renderSummary();
+});
+
+selectAllEl.addEventListener("click", () => {
+  getFilteredItems().forEach((item) => state.selected.add(item.id));
+  render();
+});
+
+clearAllEl.addEventListener("click", () => {
+  getFilteredItems().forEach((item) => state.selected.delete(item.id));
+  render();
+});
+
+rebuildColorLibraryEl.addEventListener("click", async () => {
+  await fetch("/api/color-library/rebuild", { method: "POST" });
+  await fetchColorLibrary();
+  render();
+});
+
+closeDetailModalEl.addEventListener("click", closeDetailModal);
+detailModalEl.addEventListener("click", (event) => {
+  if (event.target.dataset.closeModal === "true") {
+    closeDetailModal();
+  }
+});
+
+addBeadRowEl.addEventListener("click", () => {
+  detailBeadsEl.insertAdjacentHTML("beforeend", buildBeadRow());
+  wireDetailRowEvents();
+  refreshDetailCodeValidation();
+});
+
+normalizeCodesEl.addEventListener("click", () => {
+  detailBeadsEl.querySelectorAll(".bead-code").forEach((input) => {
+    input.value = normalizeCode(input.value);
+  });
+  refreshDetailCodeValidation();
+});
+
+saveReviewEl.addEventListener("click", async () => {
+  await saveDetailReview();
 });
 
 searchEl.addEventListener("input", (event) => {

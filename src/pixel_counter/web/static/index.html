@@ -38,6 +38,9 @@
     <section class="panel">
       <div class="toolbar">
         <input id="search" type="search" placeholder="搜索编号、名称、模板" />
+        <button id="selectAll" class="tool-btn">全选当前列表</button>
+        <button id="clearAll" class="tool-btn">全不选当前列表</button>
+        <button id="toggleReviewOnly" class="tool-btn">仅看待校验</button>
         <span id="count"></span>
       </div>
       <div id="cards" class="cards"></div>
@@ -46,10 +49,70 @@
     <aside class="panel summary">
       <h2>汇总</h2>
       <div id="summary"></div>
+      <section class="color-library">
+        <div class="color-library-head">
+          <h3>颜色库</h3>
+          <button id="rebuildColorLibrary" class="tool-btn">从图片重建</button>
+        </div>
+        <div id="colorLibrary" class="color-grid"></div>
+      </section>
       <textarea id="summaryText" readonly></textarea>
     </aside>
   </main>
 
-  <script src="/static/app.js?v=20260804"></script>
+  <section id="detailModal" class="modal hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <article class="modal-card">
+      <header class="modal-head">
+        <div>
+          <p class="modal-subtitle">条目详情 / 人工校验</p>
+          <h3 id="detailTitle">-</h3>
+        </div>
+        <button id="closeDetailModal" class="tool-btn">关闭</button>
+      </header>
+      <div class="modal-body">
+        <section id="detailImageWrap" class="detail-image-wrap hidden" aria-hidden="true">
+          <img id="detailImage" class="detail-image" alt="条目大图" />
+          <p id="detailImageCaption" class="detail-image-caption"></p>
+        </section>
+        <div class="modal-meta" id="detailMeta"></div>
+        <div class="modal-status-row">
+          <label>状态
+            <select id="detailStatus">
+              <option value="ok">ok</option>
+              <option value="review">review</option>
+              <option value="error">error</option>
+            </select>
+          </label>
+          <label>校验人
+            <input id="detailReviewer" type="text" placeholder="web" />
+          </label>
+        </div>
+        <div class="code-quality-row">
+          <button id="normalizeCodes" class="tool-btn">智能清洗色号</button>
+          <span id="codeQualityHint" class="code-quality-hint">色号格式：字母 + 1-2 位数字（如 B3、H7、F19）</span>
+        </div>
+        <div class="modal-table-wrap">
+          <table class="bead-table">
+            <thead>
+              <tr>
+                <th>色号</th>
+                <th>数量</th>
+                <th>颜色</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="detailBeads"></tbody>
+          </table>
+        </div>
+        <div class="modal-actions">
+          <button id="addBeadRow" class="tool-btn">新增色号行</button>
+          <button id="saveReview" class="primary-btn">保存人工校验</button>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <script src="/static/app.js?v=20260805"></script>
 </body>
 </html>
